@@ -1,0 +1,22 @@
+{
+  "name": "canjes-backend",
+  "version": "1.0.0",
+  "description": "backend for canjes.pappas",
+  "main": "index.js",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "mongoose": "^5.9.19",
+    "mongoose-unique-validator": "^2.0.3",
+    "nodemon": "^2.0.4",
+    "underscore": "^1.10.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "nodemon index.js",
+    "start": "node index.js"
+  },
+  "author": "David Silva",
+  "license": "ISC"
+}
