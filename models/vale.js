@@ -8,9 +8,8 @@ const User  = mongoose.model('User',new Schema());
 
 let valeSchema = new Schema({
     idvale: {
-        type: String
-        // unique: true,
-        // //required: true
+        type: String,
+        unique: true
     },
     idbeneficiario:{
         type: String,
@@ -40,8 +39,7 @@ let valeSchema = new Schema({
         default: true
     },
     creacion: {
-        type: Date, 
-        default: () => Date.now() - 5*60*60*1000
+        type: Date
     },
     creadopor: {
         type: Schema.Types.ObjectId, ref: User,
@@ -59,8 +57,19 @@ let valeSchema = new Schema({
 
 });
 
+valeSchema.methods.toJSON = function() {
 
-//valeSchema.plugin(uniqueValidator, { message: '{PATH} debe de ser único' });
+    let vale = this;
+    let valeObject = vale.toObject();
+    delete valeObject._id;
+    delete valeObject.__v;
+    delete valeObject.pagado;
+
+    return valeObject;
+}
+
+
+valeSchema.plugin(uniqueValidator, { message: '{PATH} debe de ser único' });
 
 
 module.exports = mongoose.model('Vale', valeSchema);
