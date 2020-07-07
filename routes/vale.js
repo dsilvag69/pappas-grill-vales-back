@@ -23,7 +23,7 @@ app.post('/vales', [autorizado, esSupervisor], function(req, res) {
         monto: req.body.monto,
         vencimiento: req.body.vencimiento,
         descripcion: req.body.descripcion,
-        creadopor: req.body.userid,
+        creadopor: req.usuario._id,
         locales,
         creacion,
         idvale
@@ -36,10 +36,9 @@ app.post('/vales', [autorizado, esSupervisor], function(req, res) {
             vale: valeDB    
         });
     });
-
 });
 
-//ver todos los vales
+//obtener vales
 app.get('/vales', [autorizado, esSupervisor], function(req, res) {
 
     let inicio = req.query.inicio || 0;
@@ -57,15 +56,108 @@ app.get('/vales', [autorizado, esSupervisor], function(req, res) {
         .populate('canjeadopor','name')
         .populate('localcanje','name')
         .exec((error, vales) => {
-
             if (error) return res.status(400).json({error})
-            
             Vale.count({}, (err, cantidad) => {
                 res.json({vales, cantidad});
             })
         });
-
 });
+
+//obtener datos de vales para dashboard
+app.get('/vales/dash', [autorizado, esSupervisor],function(req, res) {
+
+    let fechainicial = req.query.fechainicial || 0;
+    let fechafinal = req.query.rango || Date.now() - 5*60*60*1000;
+    let local = req.query.local || '';
+    let filtro = req.query.canjeados || false 
+
+
+    if (local){
+        if (filtro){
+            Vale.find({ localcanje : local , fechacanje: { $gte: fechainicial, $lte: fechafinal }})
+            .exec((error, vales) => {
+                if (error) return res.status(400).json({error})
+                let cantidad = Object.keys(vales).length
+                var suma = 0
+                vales.forEach((vale)=>{
+                    suma = suma + vale.monto
+                });
+                let resumen = {
+                    cantidad,
+                    suma : suma.toFixed(2)
+                }
+                res.json({resumen});
+            });
+        }else{
+        Vale.find({ localcanje : local , creacion: { $gte: fechainicial, $lte: fechafinal }})
+            .exec((error, vales) => {
+                if (error) return res.status(400).json({error})
+                let cantidad = Object.keys(vales).length
+                var suma = 0
+                var canjeados = 0
+                var sumacanjeados = 0
+                vales.forEach((vale)=>{
+                    suma = suma + vale.monto
+                    if(vale.canjeadopor){
+                        canjeados = canjeados + 1
+                        sumacanjeados = sumacanjeados + vale.monto
+                    }
+                });
+                let resumen = {
+                    cantidad,
+                    suma : suma.toFixed(2),
+                    canjeados,
+                    sumacanjeados : sumacanjeados.toFixed(2)
+                }
+                res.json({resumen});
+            });
+        }
+    }else{
+        if (filtro){
+            console.log('filtro: ',filtro);
+            Vale.find({fechacanje: { $gte: fechainicial, $lte: fechafinal }})
+            .exec((error, vales) => {
+                if (error) return res.status(400).json({error})
+                let cantidad = Object.keys(vales).length
+                var suma = 0
+                vales.forEach((vale)=>{
+                    suma = suma + vale.monto
+                });
+                let resumen = {
+                    cantidad,
+                    suma : suma.toFixed(2)
+                }
+                res.json({resumen});
+            });
+        }else{
+        Vale.find({creacion: { $gte: fechainicial, $lte: fechafinal }})
+            .exec((error, vales) => {
+                if (error) return res.status(400).json({error})
+                                    let cantidad = Object.keys(vales).length
+                var suma = 0
+                var canjeados = 0
+                var sumacanjeados = 0
+                vales.forEach((vale)=>{
+                    suma = suma + vale.monto
+                    if(vale.canjeadopor){
+                        canjeados = canjeados + 1
+                        sumacanjeados = sumacanjeados + vale.monto
+                    }
+                });
+                let resumen = {
+                    cantidad,
+                    suma : suma.toFixed(2),
+                    canjeados,
+                    sumacanjeados : sumacanjeados.toFixed(2)
+                }
+                res.json({resumen});
+            });
+        }
+    }
+    
+});
+
+
 
 //modificar vale
 app.put('/vales/:id', [autorizado, esSupervisor], function(req, res) {
@@ -82,12 +174,7 @@ app.put('/vales/:id', [autorizado, esSupervisor], function(req, res) {
             if (err) return res.status(400).json({error : err});
             res.json({ok : 'modificado correctamente'});
         })
-    }else{
-        return res.status(400).json({error : 'No se ha modificado nada'})
-    }
-
-
-
+    }else return res.status(400).json({error : 'No se ha modificado nada'})
 });
 
 //borrar vale
@@ -98,15 +185,14 @@ app.delete('/vales/:id',[autorizado, esSupervisor], function(req, res) {
         if (error) return res.status(400).json({error});
         if (!valeDB) return res.status(400).json({error : 'vale no existe'});
         if (valeDB.activo = false) {
-            return res.json({error: 'vale ya ha sido canjeado'})
-        }else{
             Vale.deleteOne({idvale : req.params.id}, (err) => {
                 if (err) return res.status(400).json({err})
                 res.json({ok : 'eliminado correctamente'});
             });
+        }else{
+            return res.json({error: 'vale ya ha sido canjeado'})
         }
     })
-
 });
 
 
@@ -116,11 +202,10 @@ app.delete('/vales/:id',[autorizado, esSupervisor], function(req, res) {
 //registrar canje
 app.put('/vales/admin/:id', autorizado, function(req, res) {
 
-    if (!req.body.userid || !req.body.local) return res.status(400).json({error : 'enviar userid y localid'});
-
     let fecha = Date.now() - 5*60*60*1000
 
     let errorvale = ''
+
     Vale.findOne({idvale : req.params.id}, (err, valeDB)=>{
 
         if (err) errorvale = err
@@ -128,16 +213,17 @@ app.put('/vales/admin/:id', autorizado, function(req, res) {
         if (!valeDB.activo) errorvale = 'vale ya canjeado'
         if (valeDB.vencimiento < fecha) errorvale ='vale ya ha vencido'
 
+        let body = {
+            activo: false,
+            canjeadopor : req.usuario._id,
+            localcanje : req.usuario.locals[0]._id,
+            fechacanje : fecha
+        }
+
         if(errorvale!=''){
             return res.status(400).json({ error : errorvale})
         }else{
-            let body = {
-                activo: false,
-                canjeadopor : req.body.userid,
-                localcanje : req.body.localid,
-                fechacanje : fecha
-            }
-            Vale.updateOne({idvale : req.params.id}, body, { new: true, runValidators: true }, (err, valeDB) => {
+            Vale.updateOne({idvale : req.params.id}, body, { new: true, runValidators: true }, (err) => {
                 if (err) return res.status(400).json({err});
                 res.json({ok : 'canjeado correctamente'});
             })
@@ -150,7 +236,7 @@ app.put('/vales/admin/:id', autorizado, function(req, res) {
 
 // *** Administrador y Cliente***
 
-//ver un vale especifico
+//obtener vale por ID
 app.get('/vales/:id', function(req, res) {
 
     Vale.findOne({ idvale : req.params.id})

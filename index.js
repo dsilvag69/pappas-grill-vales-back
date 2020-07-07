@@ -23,9 +23,9 @@ app.use(require('./routes/vale'));
 
 mongoose.connect(process.env.URLDB, { useNewUrlParser: true ,useUnifiedTopology: true}, (err, res) => {
     if (err) throw err;
-    console.log("db online");
+    //console.log("db online");
 });
 
 app.listen(process.env.PORT,() => {
-    console.log("app online");
+    console.log("app online en localhost:3030");
 });
