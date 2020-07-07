@@ -178,12 +178,12 @@ app.put('/vales/:id', [autorizado, esSupervisor], function(req, res) {
 
 //borrar vale
 app.delete('/vales/:id',[autorizado, esSupervisor], function(req, res) {
-
+    
     Vale.findOne({idvale : req.params.id}, (error, valeDB)=>{
 
         if (error) return res.status(400).json({error});
         if (!valeDB) return res.status(400).json({error : 'vale no existe'});
-        if (valeDB.activo = false) {
+        if (valeDB.activo) {
             Vale.deleteOne({idvale : req.params.id}, (err) => {
                 if (err) return res.status(400).json({err})
                 res.json({ok : 'eliminado correctamente'});
