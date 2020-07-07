@@ -67,7 +67,7 @@ app.get('/vales', [autorizado, esSupervisor], function(req, res) {
 app.get('/vales/dash', [autorizado, esSupervisor],function(req, res) {
 
     let fechainicial = req.query.fechainicial || 0;
-    let fechafinal = req.query.rango || Date.now() - 5*60*60*1000;
+    let fechafinal = req.query.fechafinal || Date.now() - 5*60*60*1000;
     let local = req.query.local || '';
     let filtro = req.query.canjeados || false 
 
@@ -114,7 +114,6 @@ app.get('/vales/dash', [autorizado, esSupervisor],function(req, res) {
         }
     }else{
         if (filtro){
-            console.log('filtro: ',filtro);
             Vale.find({fechacanje: { $gte: fechainicial, $lte: fechafinal }})
             .exec((error, vales) => {
                 if (error) return res.status(400).json({error})
